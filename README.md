@@ -1,8 +1,3 @@
-
-Никаких зависимостей, фреймворков или сборщиков. Открой `index.html` в браузере — и всё работает.
-
----
-
 ## ❓ Частые вопросы
 
 <details>
@@ -98,19 +93,3 @@
 | **localStorage** | Хранение истории и статистики |
 | **MCSrvStat API** | Данные о серверах Minecraft |
 | **IP-API** | Геолокация серверов |
-
----
-
-## 🚀 Быстрый старт (для разработчиков)
-
-```bash
-# Клонируй репозиторий
-git clone https://github.com/hero684k/ServerDetective.git
-
-# Перейди в папку
-cd ServerDetective
-
-# Открой в браузере
-open index.html
-# или
-start index.html
