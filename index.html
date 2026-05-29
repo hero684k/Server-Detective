@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Server Detective | Minecraft Server Checker</title>
+    <meta name="description" content="Server Detective — проверка серверов Minecraft без захода в игру">
+    <meta name="author" content="hero684k">
+    <meta name="theme-color" content="#8b5cf6">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #8b5cf6; --primary-dark: #7c3aed; --secondary: #a78bfa;
+            --text-dark: #f8fafc; --text-gray: #cbd5e1; --text-muted: #94a3b8;
+            --bg-body: #020617; --bg-card: #0f172a; --bg-hover: #1e293b; --card-border: #1f2937;
+            --online: #10b981; --offline: #ef4444; --warning: #f59e0b;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(245, 158, 11, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            position: relative;
+            z-index: 1;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .logo {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 25px rgba(139, 92, 246, 0.4));
+            letter-spacing: -0.02em;
+        }
+        .subtitle {
+            color: var(--text-gray);
+            font-size: 1.1rem;
+            margin-top: 0.3rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: var(--bg-card);
+            border-radius: 2rem;
+            padding: 2rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            background: #0a0c16;
+            border: 2px solid var(--card-border);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+        }
+        .search-input::placeholder { color: var(--text-muted); }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background-size: 200% 200%;
+            animation: shimmer 3s ease infinite;
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.4); }
+        .btn:active { transform: scale(0.96); }
+        
+        .btn-secondary {
+            background: var(--bg-hover);
+            border: 1px solid var(--card-border);
+            animation: none;
+        }
+        .btn-secondary:hover { border-color: var(--primary); box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
+
+        .btn-copy {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.8rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+        .btn-copy:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-copy.copied { border-color: var(--online); color: var(--online); }
+
+        .quick-servers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+        .quick-server {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            color: #c4b5fd;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        .quick-server:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .result-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid var(--card-border);
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .result-card.show { display: block; }
+
+        .server-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .server-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 1.2rem;
+            background: #1a1d2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid var(--card-border);
+            flex-shrink: 0;
+        }
+        .server-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .server-icon .no-icon { font-size: 2rem; opacity: 0.5; }
+
+        .server-info { flex: 1; min-width: 200px; }
+        .server-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .server-address {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .status-online {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--online);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .status-offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--offline);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .status-checking {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: pulse 1.5s ease infinite;
+        }
+
+        .tags-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .tag {
+            padding: 0.2rem 0.7rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .tag-vanilla { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .tag-bukkit { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .tag-modded { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+        .tag-pvp { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        .tag-minigames { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+
+        .geo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+        .geo-flag { font-size: 1.1rem; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+        .info-item {
+            background: rgba(255,255,255,0.03);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+        }
+        .info-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+        }
+        .info-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+        }
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .motd-box {
+            background: #0a0c16;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--card-border);
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .players-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .player-tag {
+            background: rgba(139, 92, 246, 0.12);
+            color: #c4b5fd;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .history-section { margin-top: 1.5rem; }
+        .history-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .history-list { display: flex; flex-direction: column; gap: 0.4rem; }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+            padding: 0.8rem 1.2rem;
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        .history-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--card-border);
+        }
+        .history-address { font-weight: 500; }
+        .history-time { color: var(--text-muted); font-size: 0.85rem; }
+
+        .loading-dots {
+            display: inline-block;
+            animation: pulse 1.5s ease infinite;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            opacity: 0.7;
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            body { padding: 1rem; }
+            .logo { font-size: 2rem; }
+            .main-card { padding: 1.2rem; }
+            .server-header { flex-direction: column; align-items: flex-start; }
+            .btn { padding: 0.8rem 1.5rem; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎮 Server Detective</div>
+            <div class="subtitle">Проверка серверов Minecraft без захода в игру</div>
+        </div>
+
+        <div class="main-card">
+            <div class="search-box">
+                <input type="text" class="search-input" id="serverInput" placeholder="Введи IP сервера (например: hypixel.net)">
+                <button class="btn" id="checkBtn">🔍 Проверить</button>
+            </div>
+
+            <div class="quick-servers" id="quickServers">
+                <span style="color:var(--text-muted); font-size:0.85rem; margin-right:0.5rem;">⚡ Быстрые:</span>
+                <button class="quick-server" data-ip="hypixel.net">Hypixel</button>
+                <button class="quick-server" data-ip="mc.mineblaze.net">MineBlaze</button>
+                <button class="quick-server" data-ip="play.chestmc.net">ChestMC</button>
+                <button class="quick-server" data-ip="funtime.su">Funtime</button>
+                <button class="quick-server" data-ip="2b2t.org">2b2t</button>
+            </div>
+
+            <div class="result-card" id="resultCard">
+                <div class="server-header">
+                    <div class="server-icon" id="serverIcon">
+                        <span class="no-icon">🧱</span>
+                    </div>
+                    <div class="server-info">
+                        <div class="server-name" id="serverName">-</div>
+                        <div class="server-address">
+                            <span id="serverAddress">-</span>
+                            <button class="btn-copy" id="copyIpBtn" title="Копировать IP">📋</button>
+                            <span class="geo-badge" id="geoBadge" style="display:none;"></span>
+                        </div>
+                        <span class="status-badge status-checking" id="statusBadge">Проверка...</span>
+                        <div class="tags-row" id="tagsRow"></div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Версия</div>
+                        <div class="info-value" id="serverVersion">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Игроки</div>
+                        <div class="info-value" id="serverPlayers">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Пинг</div>
+                        <div class="info-value" id="serverPing">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Протокол</div>
+                        <div class="info-value" id="serverProtocol">-</div>
+                    </div>
+                </div>
+
+                <div class="info-label" style="margin-bottom:0.5rem;">MOTD (сообщение сервера)</div>
+                <div class="motd-box" id="serverMotd">-</div>
+
+                <div id="playersSection" style="display:none; margin-top:1rem;">
+                    <div class="info-label" style="margin-bottom:0.5rem;">Игроки онлайн</div>
+                    <div class="players-list" id="playersList"></div>
+                </div>
+            </div>
+
+            <div class="history-section" id="historySection" style="display:none;">
+                <div class="history-title">📋 История проверок</div>
+                <div class="history-list" id="historyList"></div>
+                <button class="btn btn-secondary" id="clearHistoryBtn" style="margin-top:1rem; width:100%;">🗑️ Очистить историю</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 <strong>hero684k</strong> | <a href="https://github.com/hero684k">GitHub</a> | MIT License</p>
+        <p style="opacity:0.6;">Использует <a href="https://mcsrvstat.us" target="_blank">MCSrvStat API</a> • <a href="http://ip-api.com" target="_blank">IP-API</a></p>
+    </footer>
+
+    <script>
+    (function() {
+        const serverInput = document.getElementById('serverInput');
+        const checkBtn = document.getElementById('checkBtn');
+        const resultCard = document.getElementById('resultCard');
+        const serverIcon = document.getElementById('serverIcon');
+        const serverName = document.getElementById('serverName');
+        const serverAddress = document.getElementById('serverAddress');
+        const copyIpBtn = document.getElementById('copyIpBtn');
+        const geoBadge = document.getElementById('geoBadge');
+        const statusBadge = document.getElementById('statusBadge');
+        const serverVersion = document.getElementById('serverVersion');
+        const serverPlayers = document.getElementById('serverPlayers');
+        const serverPing = document.getElementById('serverPing');
+        const serverProtocol = document.getElementById('serverProtocol');
+        const serverMotd = document.getElementById('serverMotd');
+        const playersSection = document.getElementById('playersSection');
+        const playersList = document.getElementById('playersList');
+        const tagsRow = document.getElementById('tagsRow');
+        const historySection = document.getElementById('historySection');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+        let history = JSON.parse(localStorage.getItem('serverDetectiveHistory') || '[]');
+        let serverStats = JSON.parse(localStorage.getItem('serverDetectiveStats') || '{}');
+        let currentServerIp = '';
+
+        // ========== ОЧИСТКА MOTD ==========
+        function cleanMotd(motd) {
+            if (!motd) return 'Нет MOTD';
+            if (typeof motd === 'string') return motd.replace(/§[0-9a-fk-or]/gi, '').trim();
+            if (Array.isArray(motd)) {
+                return motd.map(line => 
+                    typeof line === 'string' ? line.replace(/§[0-9a-fk-or]/gi, '') : ''
+                ).join('\n').trim();
+            }
+            if (typeof motd === 'object' && motd.clean) {
+                return motd.clean.join('\n').trim();
+            }
+            return String(motd);
+        }
+
+        // ========== ФОРМАТИРОВАНИЕ ==========
+        function formatProtocol(protocol) {
+            if (!protocol) return '-';
+            if (typeof protocol === 'number') return protocol;
+            if (typeof protocol === 'object' && protocol.name) return protocol.name;
+            return String(protocol);
+        }
+
+        // ========== УВЕДОМЛЕНИЕ ==========
+        function showNotification(message, type = 'info') {
+            const old = document.querySelector('.notification');
+            if (old) old.remove();
+
+            const colors = {
+                info: { bg: '#1e3a5f', border: '#3b82f6', icon: 'ℹ️' },
+                success: { bg: '#14532d', border: '#10b981', icon: '✅' },
+                error: { bg: '#450a0a', border: '#ef4444', icon: '❌' },
+                warning: { bg: '#451a03', border: '#f59e0b', icon: '⚠️' }
+            };
+            const color = colors[type] || colors.info;
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px; background: ${color.bg};
+                border: 1px solid ${color.border}; color: white; padding: 1rem 1.5rem;
+                border-radius: 1rem; font-weight: 500; z-index: 9999;
+                animation: slideIn 0.3s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                max-width: 400px; display: flex; align-items: center; gap: 0.5rem;
+            `;
+            notification.innerHTML = `<span>${color.icon}</span> ${message}`;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // ========== ГЕОЛОКАЦИЯ ==========
+        async function getGeoLocation(ip) {
+            try {
+                // Извлекаем чистый IP (без порта)
+                const cleanIp = ip.split(':')[0];
+                const response = await fetch(`http://ip-api.com/json/${cleanIp}?fields=country,countryCode,city`);
+                const data = await response.json();
+                if (data.country) {
+                    return {
+                        country: data.country,
+                        code: data.countryCode,
+                        city: data.city
+                    };
+                }
+            } catch (e) {
+                console.log('Геолокация недоступна');
+            }
+            return null;
+        }
+
+        function getFlagEmoji(countryCode) {
+            if (!countryCode) return '🌍';
+            const codePoints = countryCode
+                .toUpperCase()
+                .split('')
+                .map(char => 127397 + char.charCodeAt());
+            return String.fromCodePoint(...codePoints);
+        }
+
+        // ========== ТЕГИ СЕРВЕРА ==========
+        function detectServerTags(data, motd) {
+            const tags = [];
+            const motdLower = motd.toLowerCase();
+            
+            // Проверка на моды
+            if (data.mods && data.mods.names && data.mods.names.length > 0) {
+                tags.push({ text: 'Forge', class: 'tag-modded' });
+            }
+            
+            // Проверка на плагины
+            if (data.plugins && data.plugins.names && data.plugins.names.length > 0) {
+                tags.push({ text: 'Bukkit', class: 'tag-bukkit' });
+            } else if (!data.mods || !data.mods.names || data.mods.names.length === 0) {
+                tags.push({ text: 'Vanilla', class: 'tag-vanilla' });
+            }
+            
+            // Проверка по MOTD
+            if (motdLower.includes('pvp') || motdLower.includes('пвп')) {
+                tags.push({ text: 'PvP', class: 'tag-pvp' });
+            }
+            if (motdLower.includes('mini') || motdLower.includes('bedwars') || motdLower.includes('skywars') || motdLower.includes('голодные')) {
+                tags.push({ text: 'Mini-Games', class: 'tag-minigames' });
+            }
+            if (motdLower.includes('анарх') || motdLower.includes('anarchy')) {
+                tags.push({ text: 'Анархия', class: 'tag-pvp' });
+            }
+            if (motdLower.includes('выживание') || motdLower.includes('survival')) {
+                tags.push({ text: 'Выживание', class: 'tag-vanilla' });
+            }
+            if (motdLower.includes('creative') || motdLower.includes('креатив')) {
+                tags.push({ text: 'Креатив', class: 'tag-vanilla' });
+            }
+            if (data.players && data.players.online >= 1000) {
+                tags.push({ text: 'Крупный', class: 'tag-modded' });
+            }
+            
+            return tags.slice(0, 5);
+        }
+
+        function renderTags(tags) {
+            tagsRow.innerHTML = tags.map(tag => 
+                `<span class="tag ${tag.class}">${tag.text}</span>`
+            ).join('');
+        }
+
+        // ========== КОПИРОВАНИЕ IP ==========
+        copyIpBtn.addEventListener('click', () => {
+            const ip = currentServerIp;
+            if (!ip) return;
+            navigator.clipboard.writeText(ip).then(() => {
+                copyIpBtn.textContent = '✅';
+                copyIpBtn.classList.add('copied');
+                showNotification('IP скопирован!', 'success');
+                setTimeout(() => {
+                    copyIpBtn.textContent = '📋';
+                    copyIpBtn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+
+        // ========== СОХРАНЕНИЕ ТОЧКИ ==========
+        function saveDataPoint(ip, online, max) {
+            if (!serverStats[ip]) serverStats[ip] = [];
+            const points = serverStats[ip];
+            const lastPoint = points[points.length - 1];
+            
+            if (lastPoint && lastPoint.online === online) return false;
+            
+            const point = {
+                time: new Date().toISOString(),
+                displayTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                online: online,
+                max: max,
+                timestamp: Date.now()
+            };
+            
+            serverStats[ip].push(point);
+            const oneDayAgo = Date.now() - 86400000;
+            serverStats[ip] = serverStats[ip].filter(p => p.timestamp > oneDayAgo);
+            if (serverStats[ip].length > 200) serverStats[ip] = serverStats[ip].slice(-200);
+            
+            localStorage.setItem('serverDetectiveStats', JSON.stringify(serverStats));
+            return true;
+        }
+
+        // ========== ГРАФИК ==========
+        async function createServerGraph(ip) {
+            const existingData = serverStats[ip] || [];
+            
+            if (existingData.length >= 3) {
+                showNotification(`📊 Загружен график из ${existingData.length} точек`, 'success');
+                renderServerGraph(ip, existingData);
+                return;
+            }
+            
+            const totalChecks = 6;
+            const intervalMs = 70000;
+            
+            showNotification(`🔍 Собираем данные (${totalChecks} замеров, ~7 минут)...`, 'info');
+            
+            try {
+                const resp = await fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(ip)}`);
+                const d = await resp.json();
+                if (d.online) saveDataPoint(ip, d.players?.online || 0, d.players?.max || 0);
+            } catch (e) {}
+            
+            for (let i = 1; i < totalChecks; i++) {
+                await new Promise(r => setTimeout(r, intervalMs));
+                try {
+                    const resp = await fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(ip)}`);
+                    const d = await resp.json();
+                    if (d.online) saveDataPoint(ip, d.players?.online || 0, d.players?.max || 0);
+                } catch (e) {}
+            }
+            
+            const allData = serverStats[ip] || [];
+            if (allData.length > 0) {
+                showNotification(`✅ Готово! ${allData.length} точек`, 'success');
+                renderServerGraph(ip, allData);
+            } else {
+                showNotification(`❌ Сервер оффлайн.`, 'error');
+            }
+        }
+
+        function renderServerGraph(ip, data) {
+            const oldGraph = document.getElementById('serverGraph');
+            if (oldGraph) oldGraph.remove();
+            if (!data || data.length === 0) return;
+
+            const graphSection = document.createElement('div');
+            graphSection.id = 'serverGraph';
+            graphSection.style.cssText = `
+                background: rgba(0,0,0,0.4); border-radius: 1.5rem; padding: 1.5rem;
+                margin-top: 1.5rem; border: 1px solid var(--card-border); animation: fadeIn 0.4s ease;
+            `;
+
+            data.sort((a, b) => a.timestamp - b.timestamp);
+            
+            const maxOnline = Math.max(...data.map(d => d.online), 1);
+            const minOnline = Math.min(...data.map(d => d.online), 0);
+            const avgOnline = Math.round(data.reduce((s, d) => s + d.online, 0) / data.length);
+            
+            const width = 650, height = 280;
+            const pad = { top: 30, right: 30, bottom: 55, left: 55 };
+            const cw = width - pad.left - pad.right, ch = height - pad.top - pad.bottom;
+            const range = maxOnline - minOnline || 1;
+            const getX = (i) => pad.left + (i / (data.length - 1 || 1)) * cw;
+            const getY = (v) => pad.top + ch - ((v - minOnline) / range) * ch;
+
+            let pathD = '', areaD = '';
+            data.forEach((p, i) => {
+                const x = getX(i), y = getY(p.online);
+                pathD += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+            });
+            areaD = pathD + ` L ${getX(data.length-1)} ${pad.top+ch} L ${getX(0)} ${pad.top+ch} Z`;
+
+            const dots = data.map((p, i) => {
+                const x = getX(i), y = getY(p.online);
+                const isMax = p.online === maxOnline, isMin = p.online === minOnline;
+                return `<circle cx="${x}" cy="${y}" r="${isMax||isMin?5:3}" fill="${isMax?'#10b981':isMin?'#ef4444':'#8b5cf6'}" stroke="white" stroke-width="2"><title>${p.displayTime} — ${p.online} игр.</title></circle>`;
+            }).join('');
+
+            const yLabels = [];
+            for (let i = 0; i <= 5; i++) {
+                const val = Math.round(minOnline + (range/5)*i);
+                const y = getY(val);
+                yLabels.push(`<text x="${pad.left-10}" y="${y+4}" text-anchor="end" fill="#94a3b8" font-size="11">${val}</text><line x1="${pad.left}" y1="${y}" x2="${width-pad.right}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4,4"/>`);
+            }
+
+            const maxLabels = 8, step = Math.max(1, Math.floor(data.length/maxLabels));
+            const xLabels = data.map((p, i) => {
+                if (i % step !== 0 && i !== data.length-1) return '';
+                const x = getX(i);
+                return `<text x="${x}" y="${height-pad.bottom+20}" text-anchor="middle" fill="#94a3b8" font-size="10" transform="rotate(-35,${x},${height-pad.bottom+20})">${p.displayTime}</text>`;
+            }).join('');
+
+            const diff = data[data.length-1].online - data[0].online;
+            const trendIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '📊';
+            const trendColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#94a3b8';
+
+            graphSection.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <div><div style="font-weight:600;">📊 График онлайна</div><div style="font-size:0.75rem; color:var(--text-muted);">${ip} • ${data.length} точек</div></div>
+                    <button class="btn btn-secondary" onclick="this.closest('#serverGraph').remove()" style="padding:0.4rem 1rem; font-size:0.8rem;">✕</button>
+                </div>
+                <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+                    <div style="background:rgba(139,92,246,0.15); padding:0.5rem 1rem; border-radius:1rem;"><span style="font-size:0.65rem; color:var(--text-muted);">Средний</span><div style="font-weight:700; color:#a78bfa;">${avgOnline}</div></div>
+                    <div style="background:rgba(16,185,129,0.15); padding:0.5rem 1rem; border-radius:1rem;"><span style="font-size:0.65rem; color:var(--text-muted);">Пик</span><div style="font-weight:700; color:#10b981;">${maxOnline}</div></div>
+                    <div style="background:rgba(239,68,68,0.15); padding:0.5rem 1rem; border-radius:1rem;"><span style="font-size:0.65rem; color:var(--text-muted);">Мин.</span><div style="font-weight:700; color:#ef4444;">${minOnline}</div></div>
+                    <div style="background:${trendColor}15; padding:0.5rem 1rem; border-radius:1rem;"><span style="font-size:0.65rem; color:var(--text-muted);">Тренд</span><div style="font-weight:700; color:${trendColor};">${trendIcon} ${diff>0?'+':''}${diff}</div></div>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); border-radius:1rem; padding:0.5rem; overflow-x:auto;">
+                    <svg viewBox="0 0 ${width} ${height}" style="width:100%; min-width:500px;">
+                        <defs><linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs>
+                        ${yLabels}<path d="${areaD}" fill="url(#grad)"/><path d="${pathD}" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>${dots}${xLabels}
+                    </svg>
+                </div>
+            `;
+            document.getElementById('resultCard').appendChild(graphSection);
+            setTimeout(() => graphSection.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+        }
+
+        // ========== ПЛАГИНЫ ==========
+        function renderPlugins(plugins, mods) {
+            const old = document.getElementById('serverPlugins');
+            if (old) old.remove();
+            
+            const all = [];
+            if (plugins?.names) all.push(...plugins.names.map(p => ({ name: p, type: 'plugin' })));
+            if (mods?.names) all.push(...mods.names.map(m => ({ name: m, type: 'mod' })));
+            if (all.length === 0) return;
+            
+            const sec = document.createElement('div');
+            sec.id = 'serverPlugins';
+            sec.style.cssText = `background: rgba(0,0,0,0.4); border-radius: 1rem; padding: 1.5rem; margin-top: 1rem; border: 1px solid var(--card-border); animation: fadeIn 0.4s ease;`;
+            sec.innerHTML = `
+                <div style="font-weight:600; margin-bottom:1rem;">🔧 Плагины и моды (${all.length})</div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+                    ${all.map(p => `<span style="background:${p.type==='mod'?'#f59e0b':'#8b5cf6'}15; color:${p.type==='mod'?'#f59e0b':'#8b5cf6'}; padding:0.3rem 0.8rem; border-radius:2rem; font-size:0.8rem; border:1px solid ${p.type==='mod'?'#f59e0b':'#8b5cf6'}30;">${p.type==='mod'?'⚙️':'🔌'} ${p.name}</span>`).join('')}
+                </div>`;
+            document.getElementById('resultCard').appendChild(sec);
+        }
+
+        // ========== ПРОВЕРКА СЕРВЕРА ==========
+        async function checkServer(ip) {
+            currentServerIp = ip;
+            resultCard.classList.add('show');
+            statusBadge.textContent = 'Проверка...';
+            statusBadge.className = 'status-badge status-checking';
+            serverName.textContent = ip;
+            serverAddress.textContent = ip;
+            serverVersion.textContent = '...';
+            serverPlayers.textContent = '...';
+            serverPing.textContent = '...';
+            serverProtocol.textContent = '...';
+            serverMotd.textContent = 'Загрузка...';
+            serverIcon.innerHTML = '<span class="no-icon">🧱</span>';
+            playersSection.style.display = 'none';
+            tagsRow.innerHTML = '';
+            geoBadge.style.display = 'none';
+            copyIpBtn.style.display = 'inline-block';
+            
+            ['serverGraph', 'serverPlugins', 'graphBtnContainer'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            });
+
+            const startTime = Date.now();
+
+            try {
+                const [response, geoData] = await Promise.all([
+                    fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(ip)}`),
+                    getGeoLocation(ip)
+                ]);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const pingTime = Date.now() - startTime;
+
+                if (data.online) {
+                    statusBadge.textContent = '🟢 Онлайн';
+                    statusBadge.className = 'status-badge status-online';
+                    serverName.textContent = data.hostname || data.ip || ip;
+                    serverAddress.textContent = `${data.ip || ip}:${data.port || 25565}`;
+                    
+                    const versionName = data.version?.name || data.version || 'Неизвестно';
+                    serverVersion.textContent = versionName;
+
+                    const online = data.players?.online ?? 0;
+                    const max = data.players?.max ?? 0;
+                    serverPlayers.textContent = `${online} / ${max}`;
+                    serverProtocol.textContent = formatProtocol(data.protocol);
+                    serverPing.textContent = `${pingTime}ms`;
+                    
+                    const motd = cleanMotd(data.motd) || 'Нет MOTD';
+                    serverMotd.textContent = motd;
+
+                    saveDataPoint(ip, online, max);
+
+                    // Геолокация
+                    if (geoData) {
+                        geoBadge.style.display = 'inline-flex';
+                        geoBadge.innerHTML = `<span class="geo-flag">${getFlagEmoji(geoData.code)}</span> ${geoData.city}, ${geoData.country}`;
+                    }
+
+                    // Теги
+                    const tags = detectServerTags(data, motd);
+                    renderTags(tags);
+
+                    // Иконка
+                    if (data.icon) {
+                        serverIcon.innerHTML = `<img src="${data.icon}" alt="Icon" onerror="this.parentElement.innerHTML='<span class=\\'no-icon\\'>🧱</span>'">`;
+                    }
+
+                    // Игроки
+                    if (data.players?.list?.length > 0) {
+                        playersSection.style.display = 'block';
+                        playersList.innerHTML = data.players.list.map(p => 
+                            `<span class="player-tag">👤 ${typeof p === 'string' ? p : p.name || 'Игрок'}</span>`
+                        ).join('');
+                    } else if (online > 0) {
+                        playersSection.style.display = 'block';
+                        playersList.innerHTML = '<span style="color:var(--text-muted); font-size:0.9rem;">Список скрыт</span>';
+                    }
+
+                    // Плагины
+                    if (data.plugins || data.mods) renderPlugins(data.plugins, data.mods);
+
+                    // Кнопка графика
+                    const gbc = document.createElement('div');
+                    gbc.id = 'graphBtnContainer';
+                    gbc.style.cssText = 'margin-top:1rem; display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;';
+                    const gb = document.createElement('button');
+                    gb.className = 'btn';
+                    gb.textContent = '📊 График онлайна';
+                    gb.style.cssText = 'background: linear-gradient(135deg, #10b981, #059669); animation: none;';
+                    gb.onclick = () => createServerGraph(ip);
+                    gbc.appendChild(gb);
+                    const hint = document.createElement('span');
+                    hint.style.cssText = 'font-size:0.7rem; color:var(--text-muted);';
+                    hint.textContent = (serverStats[ip] || []).length > 0 ? `Сохранено: ${serverStats[ip].length} т.` : 'Сбор 7 мин';
+                    gbc.appendChild(hint);
+                    resultCard.appendChild(gbc);
+
+                } else {
+                    statusBadge.textContent = '🔴 Оффлайн';
+                    statusBadge.className = 'status-badge status-offline';
+                    serverVersion.textContent = '-';
+                    serverPlayers.textContent = '-';
+                    serverPing.textContent = `${pingTime}ms`;
+                    serverProtocol.textContent = '-';
+                    serverMotd.textContent = data.error || 'Сервер не отвечает';
+                    serverIcon.innerHTML = '<span class="no-icon">❌</span>';
+                }
+
+                addToHistory(ip, data.online);
+            } catch (error) {
+                const pingTime = Date.now() - startTime;
+                statusBadge.textContent = '🔴 Ошибка';
+                statusBadge.className = 'status-badge status-offline';
+                serverVersion.textContent = '-';
+                serverPlayers.textContent = '-';
+                serverPing.textContent = `${pingTime}ms`;
+                serverProtocol.textContent = '-';
+                serverMotd.textContent = `Ошибка: ${error.message}`;
+                serverIcon.innerHTML = '<span class="no-icon">❌</span>';
+                addToHistory(ip, false);
+            }
+        }
+
+        // ========== ИСТОРИЯ ==========
+        function addToHistory(ip, online) {
+            history = history.filter(h => h.ip !== ip);
+            history.unshift({ ip, online, time: new Date().toLocaleString('ru-RU') });
+            if (history.length > 20) history = history.slice(0, 20);
+            localStorage.setItem('serverDetectiveHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) { historySection.style.display = 'none'; return; }
+            historySection.style.display = 'block';
+            historyList.innerHTML = history.map(h => `
+                <div class="history-item" data-ip="${h.ip}">
+                    <span class="history-address">${h.online ? '🟢' : '🔴'} ${h.ip}</span>
+                    <span class="history-time">${h.time}</span>
+                </div>`).join('');
+            document.querySelectorAll('.history-item').forEach(item => {
+                item.addEventListener('click', () => checkServer(item.dataset.ip));
+            });
+        }
+
+        clearHistoryBtn.addEventListener('click', () => {
+            if (confirm('Очистить историю?')) {
+                history = [];
+                localStorage.removeItem('serverDetectiveHistory');
+                renderHistory();
+            }
+        });
+
+        // ========== ОБРАБОТЧИКИ ==========
+        checkBtn.addEventListener('click', () => {
+            const ip = serverInput.value.trim();
+            if (ip) checkServer(ip);
+        });
+        serverInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const ip = serverInput.value.trim();
+                if (ip) checkServer(ip);
+            }
+        });
+        document.querySelectorAll('.quick-server').forEach(btn => {
+            btn.addEventListener('click', () => checkServer(btn.dataset.ip));
+        });
+
+        renderHistory();
+        serverInput.focus();
+    })();
+    </script>
+</body>
+</html>
